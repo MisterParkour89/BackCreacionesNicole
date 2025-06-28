@@ -1,42 +1,27 @@
-import express from 'express';
-import cors from 'cors';
-import multer from 'multer';
-import path from 'path';
-import { fileURLToPath } from 'url';
+const express = require('express');
+const cors = require('cors');
+const path = require('path');
+const fs = require('fs');
 
 const app = express();
-const PORT = 3000;
 
-// Para __dirname en ESModules
-const __filename = fileURLToPath(import.meta.url);
-const __dirname = path.dirname(__filename);
+// Crear carpeta /uploads si no existe
+const uploadsPath = path.join(__dirname, 'uploads');
+if (!fs.existsSync(uploadsPath)) {
+  fs.mkdirSync(uploadsPath);
+}
 
-// Middleware
+// Middlewares
 app.use(cors());
-app.use(express.static(path.join(__dirname, 'public')));
+app.use(express.json());
+app.use('/uploads', express.static(uploadsPath));
 
-// Multer config para guardar en /public/images
-const storage = multer.diskStorage({
-  destination: function (req, file, cb) {
-    cb(null, 'public/images/');
-  },
-  filename: function (req, file, cb) {
-    const uniqueSuffix = Date.now() + '-' + Math.round(Math.random() * 1e9);
-    const ext = path.extname(file.originalname);
-    cb(null, file.fieldname + '-' + uniqueSuffix + ext);
-  }
-});
-const upload = multer({ storage });
+// Rutas
+const uploadRoute = require('./routes/upload');
+app.use('/upload', uploadRoute);
 
-// Endpoint para subir imagen
-app.post('/upload', upload.single('image'), (req, res) => {
-  if (!req.file) return res.status(400).send('No se envió archivo');
-
-  const imageUrl = `/images/${req.file.filename}`;
-  res.json({ imageUrl });
-});
-
-// Iniciar servidor
+// Puerto para Render
+const PORT = process.env.PORT || 3000;
 app.listen(PORT, () => {
   console.log(`Servidor corriendo en http://localhost:${PORT}`);
 });
